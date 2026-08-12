@@ -1,18 +1,39 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { HouseMark } from "@/components/HouseMark";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { BookingRow } from "@/components/admin/BookingRow";
 import { BlockDateForm } from "@/components/admin/BlockDateForm";
+import { StaffPanel } from "@/components/admin/StaffPanel";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
+  const { data: role } = await supabase.rpc("current_staff_role");
+  if (role === "staff") redirect("/staff/schedule");
+  if (!role) redirect("/admin/login");
+
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("id, start_time, status, recurrence, notes, address_line1, city, clients(full_name, phone, email), services(name)")
+    .select(
+      "id, start_time, status, recurrence, notes, address_line1, city, assigned_staff_id, clients(full_name, phone, email), services(name)"
+    )
     .in("status", ["requested", "confirmed"])
     .order("start_time", { ascending: true })
     .limit(50);
+
+  const { data: allStaff } = await supabase
+    .from("staff")
+    .select("id, full_name, phone, email, active")
+    .order("created_at", { ascending: false });
+
+  const { data: settingsRow } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "staff_invite_code")
+    .single();
+
+  const activeStaffOptions = (allStaff ?? []).filter((s) => s.active);
 
   const { data: clients } = await supabase
     .from("clients")
@@ -49,10 +70,21 @@ export default async function AdminDashboard() {
               const clients = Array.isArray(b.clients) ? b.clients[0] : b.clients;
               const services = Array.isArray(b.services) ? b.services[0] : b.services;
               return (
-                <BookingRow key={b.id} booking={{ ...b, clients: clients ?? null, services: services ?? null }} />
+                <BookingRow
+                  key={b.id}
+                  booking={{ ...b, clients: clients ?? null, services: services ?? null }}
+                  staffOptions={activeStaffOptions}
+                />
               );
             })}
           </div>
+        </section>
+
+        <div className="hairline mb-14" />
+
+        <section className="mb-14">
+          <h2 className="font-display text-2xl text-sage-deep mb-5">Staff</h2>
+          <StaffPanel staff={allStaff ?? []} inviteCode={settingsRow?.value ?? ""} />
         </section>
 
         <div className="hairline mb-14" />

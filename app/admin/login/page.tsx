@@ -1,6 +1,7 @@
 "use client";
 
 export const dynamic = "force-dynamic";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -19,12 +20,24 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError("Incorrect email or password.");
       return;
     }
-    router.push("/admin/dashboard");
+
+    const { data: role } = await supabase.rpc("current_staff_role");
+    setLoading(false);
+
+    if (role === "owner") {
+      router.push("/admin/dashboard");
+    } else if (role === "staff") {
+      router.push("/staff/schedule");
+    } else {
+      setError("Your account hasn't been approved yet. Check with Basima.");
+      await supabase.auth.signOut();
+      return;
+    }
     router.refresh();
   }
 
