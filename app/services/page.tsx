@@ -7,13 +7,21 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "Cleaning Services & Pricing in Morgantown, WV",
   description:
-    "Standard, deep, move-in/move-out, and commercial cleaning in Morgantown, WV. See pricing and book online.",
+    "Compare house, deep, move-in/move-out, recurring, and commercial cleaning services in Morgantown, WV. See starting prices and request a time online.",
+  alternates: { canonical: "/services" },
 };
 
 function formatPrice(cents: number | null) {
   if (cents == null) return "Custom quote";
   return `$${(cents / 100).toFixed(0)}`;
 }
+
+const serviceGuides = [
+  ["/house-cleaning-morgantown-wv", "House Cleaning"],
+  ["/deep-cleaning-morgantown-wv", "Deep Cleaning"],
+  ["/move-in-move-out-cleaning-morgantown-wv", "Move-In & Move-Out Cleaning"],
+  ["/commercial-cleaning-morgantown-wv", "Commercial Cleaning"],
+];
 
 export const revalidate = 3600;
 
@@ -40,7 +48,7 @@ export default async function ServicesPage() {
           </p>
         </section>
 
-        <section className="max-w-4xl mx-auto px-6 pb-8">
+        <section className="max-w-4xl mx-auto px-6 pb-10">
           <div className="divide-y divide-line hairline">
             {(services ?? []).map((s) => (
               <div key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-8">
@@ -52,17 +60,23 @@ export default async function ServicesPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-6 shrink-0">
-                  <p className="font-display text-2xl text-gold">
-                    {formatPrice(s.base_price_cents)}
-                  </p>
-                  <Link
-                    href="/book"
-                    className="tracked-caps bg-sage-deep text-cream px-6 py-3 rounded-full hover:bg-[#324a2c] transition-colors whitespace-nowrap"
-                  >
-                    Book
-                  </Link>
+                  <p className="font-display text-2xl text-gold">{formatPrice(s.base_price_cents)}</p>
+                  <Link href="/book" className="tracked-caps bg-sage-deep text-cream px-6 py-3 rounded-full hover:bg-[#324a2c] transition-colors whitespace-nowrap">Book</Link>
                 </div>
               </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="max-w-4xl mx-auto px-6 pb-20">
+          <h2 className="font-display text-3xl text-sage-deep text-center mb-8">
+            Explore our Morgantown cleaning services
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {serviceGuides.map(([href, label]) => (
+              <Link key={href} href={href} className="border border-line rounded-xl p-5 font-display text-lg text-sage-deep hover:border-sage-deep hover:bg-sage-tint transition-colors">
+                {label} →
+              </Link>
             ))}
           </div>
         </section>
