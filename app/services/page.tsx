@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Services & Pricing",
+  title: "Cleaning Services & Pricing in Morgantown, WV",
   description:
     "Standard, deep, move-in/move-out, and commercial cleaning in Morgantown, WV. See pricing and book online.",
 };
@@ -32,7 +32,7 @@ export default async function ServicesPage() {
         <section className="max-w-4xl mx-auto px-6 pt-14 pb-10 text-center">
           <p className="tracked-caps text-gold mb-3">Services &amp; Pricing</p>
           <h1 className="font-display text-4xl md:text-5xl text-sage-deep">
-            Clear pricing, no surprises.
+            Cleaning services for Morgantown homes and businesses.
           </h1>
           <p className="mt-5 text-charcoal-soft text-lg">
             Starting prices below — final quotes depend on home size and condition.
@@ -40,7 +40,7 @@ export default async function ServicesPage() {
           </p>
         </section>
 
-        <section className="max-w-4xl mx-auto px-6 pb-20">
+        <section className="max-w-4xl mx-auto px-6 pb-8">
           <div className="divide-y divide-line hairline">
             {(services ?? []).map((s) => (
               <div key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-8">

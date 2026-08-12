@@ -1,0 +1,8 @@
+import type { Metadata } from "next";
+import { ServiceLandingPage } from "@/components/ServiceLandingPage";
+
+export const metadata: Metadata = { title: "Commercial Cleaning Morgantown, WV", description: "Commercial and office cleaning in Morgantown, WV, scheduled around your business. Request a customized cleaning quote.", alternates: { canonical: "/commercial-cleaning-morgantown-wv" } };
+
+export default function Page() {
+  return <ServiceLandingPage eyebrow="For Local Workplaces" title="Commercial Cleaning in Morgantown, WV" canonicalPath="/commercial-cleaning-morgantown-wv" intro="Keep your workplace welcoming for employees and customers with a cleaning plan shaped around your space, priorities, and operating hours." included={["Restrooms, breakrooms, and shared spaces", "Floors, reachable surfaces, and high-touch points", "Trash removal and liner replacement", "Office and reception-area upkeep", "A customized checklist for your facility"]} idealFor={["Professional offices and small businesses", "Retail and customer-facing spaces", "Recurring workplace cleaning", "Businesses needing service outside operating hours"]} faqs={[{ question: "Do you provide recurring commercial cleaning?", answer: "Yes. Frequency and timing are customized around your facility and operating schedule." }, { question: "How do commercial quotes work?", answer: "We review the space, scope, frequency, and access needs before providing a quote." }, { question: "Are you insured?", answer: "Yes. Homes In Harmony LLC is licensed and insured." }, { question: "Which commercial areas do you serve?", answer: "We serve Morgantown and the confirmed surrounding communities listed on our service-area page." }]} />;
+}
