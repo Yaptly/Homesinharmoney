@@ -66,13 +66,13 @@ export default function HomePage() {
             <HouseMark className="w-40 h-36 md:w-52 md:h-48 mb-8" />
           </div>
           <p className="tracked-caps text-gold mb-4 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-            Morgantown &amp; North Central WV
+            Morgantown, WV &amp; Nearby Communities
           </p>
           <h1
             className="font-display text-4xl md:text-6xl text-sage-deep leading-[1.1] max-w-3xl animate-fade-in-up"
             style={{ animationDelay: "0.2s" }}
           >
-            Clearing the path to balance, one home at a time.
+            House Cleaning Services in Morgantown, WV
           </h1>
           <p
             className="mt-6 text-lg text-charcoal-soft max-w-xl animate-fade-in-up"
@@ -162,7 +162,7 @@ export default function HomePage() {
           <p className="text-charcoal-soft leading-relaxed text-lg">
             Homes In Harmony is built on the same qualities we look for in every person who
             joins the team: reliability, discretion, and genuine care for the spaces we're
-            trusted with. Fully insured and experienced across Morgantown and North Central WV,
+            trusted with. Licensed, insured, and experienced across Morgantown and nearby communities,
             every booking is confirmed, every visit is logged, and every home is treated like
             our own.
           </p>

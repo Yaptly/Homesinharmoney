@@ -1,49 +1,68 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const baseUrl = "https://homesinharmonyllc.com";
+const areas = ["Morgantown", "Cheat Lake", "Westover", "Star City", "Suncrest", "Brookhaven", "Granville", "Fairmont"];
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://homesinharmonyllc.com"),
+  metadataBase: new URL(baseUrl),
   title: {
-    default: "Homes In Harmony LLC | House Cleaning in Morgantown, WV",
+    default: "House Cleaning Morgantown, WV | Homes In Harmony LLC",
     template: "%s | Homes In Harmony LLC",
   },
   description:
-    "Residential and commercial cleaning in Morgantown and North Central West Virginia. Standard, deep, move-in/move-out, and recurring cleaning. Book online in minutes.",
-  keywords: [
-    "house cleaning Morgantown WV",
-    "residential cleaning North Central WV",
-    "commercial cleaning Morgantown",
-    "recurring cleaning service WV",
-    "move out cleaning Morgantown",
-  ],
+    "Licensed and insured house cleaning in Morgantown, WV and nearby communities. Background-checked staff, a satisfaction guarantee, and online booking.",
+  alternates: { canonical: "/" },
+  category: "House cleaning service",
   openGraph: {
-    title: "Homes In Harmony LLC | House Cleaning in Morgantown, WV",
+    title: "House Cleaning in Morgantown, WV | Homes In Harmony LLC",
     description:
-      "Clearing the path to balance — residential & commercial cleaning across Morgantown and North Central WV.",
-    url: "https://homesinharmonyllc.com",
+      "Residential and commercial cleaning from a licensed, insured local team with background-checked staff and a satisfaction guarantee.",
+    url: baseUrl,
     siteName: "Homes In Harmony LLC",
     locale: "en_US",
     type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "House Cleaning in Morgantown, WV | Homes In Harmony LLC",
+    description: "Licensed and insured local cleaning for Morgantown and nearby communities.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
 };
 
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "HousekeepingService",
+  "@id": `${baseUrl}/#business`,
   name: "Homes In Harmony LLC",
+  url: baseUrl,
   description:
-    "Residential and commercial cleaning serving Morgantown and North Central West Virginia.",
+    "Licensed and insured residential and commercial cleaning with background-checked staff and a satisfaction guarantee.",
   telephone: "+1-304-491-5175",
   email: "homesinharmonyllc.wv@gmail.com",
-  areaServed: {
-    "@type": "City",
-    name: "Morgantown, WV",
-  },
+  priceRange: "$$",
+  areaServed: areas.map((name) => ({ "@type": "City", name: `${name}, WV` })),
   address: {
     "@type": "PostalAddress",
     addressLocality: "Morgantown",
     addressRegion: "WV",
     addressCountry: "US",
+  },
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: "Cleaning Services",
+    itemListElement: [
+      "House Cleaning",
+      "Deep Cleaning",
+      "Move-In and Move-Out Cleaning",
+      "Recurring Cleaning",
+      "Commercial Cleaning",
+    ].map((name) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name } })),
   },
 };
 
@@ -51,10 +70,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
