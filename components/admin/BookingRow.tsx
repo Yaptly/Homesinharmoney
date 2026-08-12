@@ -14,6 +14,8 @@ type Booking = {
   address_line1: string | null;
   city: string | null;
   assigned_staff_id: string | null;
+  quoted_price_cents: number | null;
+  lead_source: string | null;
   clients: { full_name: string; phone: string; email: string | null } | null;
   services: { name: string } | null;
 };
@@ -65,6 +67,9 @@ export function BookingRow({ booking, staffOptions }: { booking: Booking; staffO
         </p>
         <p className="text-charcoal-soft mt-1">
           {booking.services?.name} — {booking.clients?.full_name}
+          {booking.quoted_price_cents != null && (
+            <span className="text-gold"> · ${(booking.quoted_price_cents / 100).toFixed(0)}</span>
+          )}
         </p>
         <p className="text-sm text-charcoal-soft/80">
           {booking.clients?.phone}
@@ -77,6 +82,9 @@ export function BookingRow({ booking, staffOptions }: { booking: Booking; staffO
         )}
         {booking.recurrence !== "none" && (
           <p className="tracked-caps text-xs text-gold mt-1">{booking.recurrence}</p>
+        )}
+        {booking.lead_source && booking.lead_source !== "website" && (
+          <p className="tracked-caps text-xs text-charcoal-soft/60 mt-1">via {booking.lead_source.replace("_", " ")}</p>
         )}
         {booking.notes && <p className="text-sm italic text-charcoal-soft/80 mt-1">"{booking.notes}"</p>}
         <select

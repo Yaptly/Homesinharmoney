@@ -5,6 +5,7 @@ import { LogoutButton } from "@/components/admin/LogoutButton";
 import { BookingRow } from "@/components/admin/BookingRow";
 import { BlockDateForm } from "@/components/admin/BlockDateForm";
 import { StaffPanel } from "@/components/admin/StaffPanel";
+import { AdminNewBookingForm } from "@/components/admin/AdminNewBookingForm";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -16,11 +17,17 @@ export default async function AdminDashboard() {
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
-      "id, start_time, status, recurrence, notes, address_line1, city, assigned_staff_id, clients(full_name, phone, email), services(name)"
+      "id, start_time, status, recurrence, notes, address_line1, city, assigned_staff_id, quoted_price_cents, lead_source, clients(full_name, phone, email), services(name)"
     )
     .in("status", ["requested", "confirmed"])
     .order("start_time", { ascending: true })
     .limit(50);
+
+  const { data: services } = await supabase
+    .from("services")
+    .select("id, name, duration_minutes, base_price_cents")
+    .eq("active", true)
+    .order("sort_order");
 
   const { data: allStaff } = await supabase
     .from("staff")
@@ -62,6 +69,7 @@ export default async function AdminDashboard() {
           <h2 className="font-display text-2xl text-sage-deep mb-5">
             Upcoming Bookings ({bookings?.length ?? 0})
           </h2>
+          <AdminNewBookingForm services={services ?? []} staffOptions={activeStaffOptions} />
           <div className="space-y-3">
             {(bookings ?? []).length === 0 && (
               <p className="text-charcoal-soft">No upcoming bookings yet.</p>
