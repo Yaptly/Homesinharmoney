@@ -51,49 +51,49 @@ export default function HomePage() {
       <SiteHeader />
       <main className="flex-1 overflow-x-clip">
         {/* Hero */}
-        <section className="relative max-w-5xl mx-auto px-6 pt-10 pb-20 text-center flex flex-col items-center">
-          <WheatSprig className="hidden md:block absolute left-2 top-16 w-10 h-40 opacity-40 animate-drift" />
+        <section className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-14 sm:pb-20 text-center flex flex-col items-center">
+          <WheatSprig className="hidden lg:block absolute left-2 top-16 w-10 h-40 opacity-40 animate-drift" />
           <WheatSprig
-            className="hidden md:block absolute right-4 top-28 w-8 h-32 opacity-30 animate-drift"
+            className="hidden lg:block absolute right-4 top-28 w-8 h-32 opacity-30 animate-drift"
             strokeColor="var(--sage)"
           />
           <WheatSprig
-            className="hidden md:block absolute left-16 bottom-0 w-8 h-28 opacity-25 animate-drift"
+            className="hidden lg:block absolute left-16 bottom-0 w-8 h-28 opacity-25 animate-drift"
             strokeColor="var(--gold-light)"
           />
 
           <div className="animate-fade-in-up">
-            <HouseMark className="w-40 h-36 md:w-52 md:h-48 mb-8" />
+            <HouseMark className="w-28 h-24 sm:w-40 sm:h-36 md:w-52 md:h-48 mb-5 sm:mb-8" />
           </div>
-          <p className="tracked-caps text-gold mb-4 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-            Morgantown · Fairmont · Clarksburg · North Central WV
+          <p className="tracked-caps text-xs sm:text-sm leading-relaxed text-gold mb-3 sm:mb-4 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+            Morgantown · Fairmont · Clarksburg
           </p>
           <h1
-            className="font-display text-4xl md:text-6xl text-sage-deep leading-[1.1] max-w-3xl animate-fade-in-up"
+            className="font-display text-3xl sm:text-4xl md:text-6xl text-sage-deep leading-[1.1] max-w-3xl animate-fade-in-up"
             style={{ animationDelay: "0.2s" }}
           >
             House Cleaning Across Morgantown, Fairmont &amp; Clarksburg
           </h1>
           <p
-            className="mt-6 text-lg text-charcoal-soft max-w-xl animate-fade-in-up"
+            className="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed text-charcoal-soft max-w-xl animate-fade-in-up"
             style={{ animationDelay: "0.3s" }}
           >
             Reliable, insured, and locally trusted residential and commercial cleaning — booked
             online, confirmed in minutes, done right every time.
           </p>
           <div
-            className="mt-10 flex flex-col sm:flex-row gap-4 animate-fade-in-up"
+            className="mt-7 sm:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-sm sm:max-w-none sm:w-auto animate-fade-in-up"
             style={{ animationDelay: "0.4s" }}
           >
             <Link
               href="/book"
-              className="tracked-caps bg-sage-deep text-cream px-8 py-4 rounded-full hover:bg-[#324a2c] hover:-translate-y-0.5 transition-all shadow-sm hover:shadow-md"
+              className="w-full sm:w-auto tracked-caps bg-sage-deep text-cream px-8 py-3.5 sm:py-4 rounded-full hover:bg-[#324a2c] hover:-translate-y-0.5 transition-all shadow-sm hover:shadow-md"
             >
               Book a Cleaning
             </Link>
             <a
               href="tel:+13044915175"
-              className="tracked-caps border border-sage-deep text-sage-deep px-8 py-4 rounded-full hover:bg-sage-tint transition-colors"
+              className="w-full sm:w-auto tracked-caps border border-sage-deep text-sage-deep px-8 py-3.5 sm:py-4 rounded-full hover:bg-sage-tint transition-colors"
             >
               Call 304-491-5175
             </a>
@@ -173,7 +173,7 @@ export default function HomePage() {
         {/* Contact */}
         <section className="relative max-w-4xl mx-auto px-6 py-20">
           <WheatSprig
-            className="hidden md:block absolute -right-2 top-10 w-9 h-36 opacity-25 animate-drift"
+            className="hidden lg:block absolute -right-2 top-10 w-9 h-36 opacity-25 animate-drift"
             strokeColor="var(--sage)"
           />
           <Reveal className="text-center mb-12">
