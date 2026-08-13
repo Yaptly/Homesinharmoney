@@ -7,15 +7,15 @@ const areas = ["Morgantown", "Clarksburg", "Fairmont"];
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "House Cleaning Morgantown, WV | Homes In Harmony LLC",
+    default: "House Cleaning Morgantown, Fairmont & Clarksburg, WV | Homes In Harmony LLC",
     template: "%s | Homes In Harmony LLC",
   },
   description:
-    "Licensed and insured house cleaning in Morgantown, WV and nearby communities. A satisfaction guarantee and easy online booking.",
+    "Licensed and insured house cleaning in Morgantown, Fairmont, Clarksburg, WV, and communities in between. Satisfaction guaranteed with easy online booking.",
   alternates: { canonical: "/" },
   category: "House cleaning service",
   openGraph: {
-    title: "House Cleaning in Morgantown, WV | Homes In Harmony LLC",
+    title: "House Cleaning in Morgantown, Fairmont & Clarksburg, WV | Homes In Harmony LLC",
     description:
       "Residential and commercial cleaning from a licensed, insured local team with a satisfaction guarantee.",
     url: baseUrl,
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "House Cleaning in Morgantown, WV | Homes In Harmony LLC",
-    description: "Licensed and insured local cleaning for Morgantown and nearby communities.",
+    description: "Licensed and insured local cleaning for Morgantown, Fairmont, Clarksburg, and communities in between.",
   },
   robots: {
     index: true,
@@ -42,7 +42,7 @@ const localBusinessSchema = {
   name: "Homes In Harmony LLC",
   url: baseUrl,
   description:
-    "Licensed and insured residential and commercial cleaning with a satisfaction guarantee.",
+    "Licensed and insured residential and commercial cleaning across Morgantown, Fairmont, Clarksburg, and North Central West Virginia, with a satisfaction guarantee.",
   telephone: "+1-304-491-5175",
   email: "homesinharmonyllc.wv@gmail.com",
   priceRange: "$$",
