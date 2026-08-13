@@ -35,7 +35,7 @@ const trustBadges = [
   },
   {
     label: "Local & Experienced",
-    desc: "Rooted in Morgantown and North Central WV, not a national franchise.",
+    desc: "Serving Morgantown, Fairmont, Clarksburg, and the communities in between.",
     icon: <path d="M8 34 V16 L20 6 L32 16 V34 M15 34 V22 H25 V34" />,
   },
   {
@@ -66,13 +66,13 @@ export default function HomePage() {
             <HouseMark className="w-40 h-36 md:w-52 md:h-48 mb-8" />
           </div>
           <p className="tracked-caps text-gold mb-4 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-            Morgantown, WV &amp; Nearby Communities
+            Morgantown · Fairmont · Clarksburg · North Central WV
           </p>
           <h1
             className="font-display text-4xl md:text-6xl text-sage-deep leading-[1.1] max-w-3xl animate-fade-in-up"
             style={{ animationDelay: "0.2s" }}
           >
-            House Cleaning Services in Morgantown, WV
+            House Cleaning Across Morgantown, Fairmont &amp; Clarksburg
           </h1>
           <p
             className="mt-6 text-lg text-charcoal-soft max-w-xl animate-fade-in-up"
@@ -162,7 +162,7 @@ export default function HomePage() {
           <p className="text-charcoal-soft leading-relaxed text-lg">
             Homes In Harmony is built on the same qualities we look for in every person who
             joins the team: reliability, discretion, and genuine care for the spaces we're
-            trusted with. Licensed, insured, and experienced across Morgantown and nearby communities,
+            trusted with. Licensed, insured, and experienced across Morgantown, Fairmont, Clarksburg, and the communities in between,
             every booking is confirmed, every visit is logged, and every home is treated like
             our own.
           </p>
