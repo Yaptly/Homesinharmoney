@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 const baseUrl = "https://homesinharmonyllc.com";
-const areas = ["Morgantown", "Cheat Lake", "Westover", "Star City", "Suncrest", "Brookhaven", "Granville", "Fairmont"];
+const areas = ["Morgantown", "Clarksburg", "Fairmont"];
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
     template: "%s | Homes In Harmony LLC",
   },
   description:
-    "Licensed and insured house cleaning in Morgantown, WV and nearby communities. Background-checked staff, a satisfaction guarantee, and online booking.",
+    "Licensed and insured house cleaning in Morgantown, WV and nearby communities. A satisfaction guarantee and easy online booking.",
   alternates: { canonical: "/" },
   category: "House cleaning service",
   openGraph: {
     title: "House Cleaning in Morgantown, WV | Homes In Harmony LLC",
     description:
-      "Residential and commercial cleaning from a licensed, insured local team with background-checked staff and a satisfaction guarantee.",
+      "Residential and commercial cleaning from a licensed, insured local team with a satisfaction guarantee.",
     url: baseUrl,
     siteName: "Homes In Harmony LLC",
     locale: "en_US",
@@ -42,7 +42,7 @@ const localBusinessSchema = {
   name: "Homes In Harmony LLC",
   url: baseUrl,
   description:
-    "Licensed and insured residential and commercial cleaning with background-checked staff and a satisfaction guarantee.",
+    "Licensed and insured residential and commercial cleaning with a satisfaction guarantee.",
   telephone: "+1-304-491-5175",
   email: "homesinharmonyllc.wv@gmail.com",
   priceRange: "$$",

@@ -3,7 +3,7 @@ import { ServiceLandingPage } from "@/components/ServiceLandingPage";
 
 export const metadata: Metadata = {
   title: "House Cleaning Morgantown, WV",
-  description: "Reliable house cleaning in Morgantown, WV from licensed, insured, background-checked professionals. One-time and recurring visits available.",
+  description: "Reliable house cleaning in Morgantown, WV from licensed and insured professionals. One-time and recurring visits available.",
   alternates: { canonical: "/house-cleaning-morgantown-wv" },
 };
 

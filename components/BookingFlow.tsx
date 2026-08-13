@@ -111,6 +111,32 @@ export function BookingFlow({ services }: { services: Service[] }) {
     const counts: Record<Recurrence, number> = { none: 1, weekly: 12, biweekly: 8, monthly: 6 };
     setConfirmedCount(counts[recurrence]);
     setStep(5);
+
+    // fire-and-forget owner notification — booking is already saved either way
+    supabase.functions
+      .invoke("notify-owner", {
+        body: {
+          type: "booking",
+          full_name: form.fullName,
+          phone: form.phone,
+          email: form.email,
+          service_name: selectedService.name,
+          start_time: new Date(selectedSlot).toLocaleString("en-US", {
+            timeZone: TZ,
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          }),
+          recurrence,
+          address: `${form.address1}${form.address2 ? ", " + form.address2 : ""}, ${form.zip}`,
+          notes: form.notes,
+        },
+      })
+      .catch(() => {
+        // booking already saved; email is best-effort
+      });
   }
 
   if (step === 5) {

@@ -14,16 +14,7 @@ type Props = {
   faqs: Faq[];
 };
 
-const areas = [
-  "Morgantown",
-  "Cheat Lake",
-  "Westover",
-  "Star City",
-  "Suncrest",
-  "Brookhaven",
-  "Granville",
-  "Fairmont",
-];
+const areas = ["Morgantown", "Clarksburg", "Fairmont"];
 
 export function ServiceLandingPage({
   eyebrow,
@@ -98,7 +89,7 @@ export function ServiceLandingPage({
             <p className="tracked-caps text-gold mb-3">Local &amp; Accountable</p>
             <h2 className="font-display text-3xl text-sage-deep mb-5">Cleaning with peace of mind.</h2>
             <p className="text-charcoal-soft leading-relaxed max-w-2xl mx-auto">
-              Homes In Harmony LLC is licensed and insured, uses background-checked staff, and stands behind every visit with a satisfaction guarantee. We serve Morgantown, Cheat Lake, Westover, Star City, Suncrest, Brookhaven, Granville, and Fairmont.
+              Homes In Harmony LLC is licensed and insured and stands behind every visit with a satisfaction guarantee. We serve Morgantown, Clarksburg, Fairmont, and the communities between.
             </p>
             <Link href="/service-areas" className="inline-block mt-6 tracked-caps text-sage-deep underline underline-offset-4">See our service area</Link>
           </div>

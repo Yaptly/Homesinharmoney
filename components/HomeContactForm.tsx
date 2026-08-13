@@ -26,6 +26,21 @@ export function HomeContactForm() {
       return;
     }
     setDone(true);
+
+    // fire-and-forget owner notification — don't block the success state on this
+    supabase.functions
+      .invoke("notify-owner", {
+        body: {
+          type: "contact",
+          full_name: form.fullName,
+          phone: form.phone,
+          email: form.email,
+          message: form.message,
+        },
+      })
+      .catch(() => {
+        // inquiry is already saved in the database either way; email is best-effort
+      });
   }
 
   if (done) {
