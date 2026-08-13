@@ -1,144 +1,96 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { HouseMark } from "@/components/HouseMark";
-import { LogoutButton } from "@/components/admin/LogoutButton";
-import { BookingRow } from "@/components/admin/BookingRow";
-import { BlockDateForm } from "@/components/admin/BlockDateForm";
-import { StaffPanel } from "@/components/admin/StaffPanel";
-import { AdminNewBookingForm } from "@/components/admin/AdminNewBookingForm";
+import { AdminShell } from "@/components/admin/AdminShell";
+
+const TZ = "America/New_York";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
-
   const { data: role } = await supabase.rpc("current_staff_role");
   if (role === "staff") redirect("/staff/schedule");
-  if (!role) redirect("/admin/login");
+  if (role !== "owner") redirect("/admin/login");
 
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(
-      "id, start_time, status, recurrence, notes, address_line1, city, assigned_staff_id, quoted_price_cents, lead_source, clients(full_name, phone, email), services(name)"
-    )
-    .in("status", ["requested", "confirmed"])
-    .order("start_time", { ascending: true })
-    .limit(50);
+  const now = new Date().toISOString();
+  const weekEnd = new Date();
+  weekEnd.setDate(weekEnd.getDate() + 7);
 
-  const { data: services } = await supabase
-    .from("services")
-    .select("id, name, duration_minutes, base_price_cents")
-    .eq("active", true)
-    .order("sort_order");
+  const [
+    { count: requestedCount },
+    { count: unassignedCount },
+    { count: weekCount },
+    { data: rawNextBookings },
+  ] = await Promise.all([
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "requested").gte("start_time", now),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).is("assigned_staff_id", null).in("status", ["requested", "confirmed"]).gte("start_time", now),
+    supabase.from("bookings").select("id", { count: "exact", head: true }).in("status", ["requested", "confirmed"]).gte("start_time", now).lte("start_time", weekEnd.toISOString()),
+    supabase
+      .from("bookings")
+      .select("id, start_time, status, assigned_staff_id, clients(full_name), services(name), staff(full_name)")
+      .in("status", ["requested", "confirmed"])
+      .gte("start_time", now)
+      .order("start_time")
+      .limit(6),
+  ]);
 
-  const { data: allStaff } = await supabase
-    .from("staff")
-    .select("id, full_name, phone, email, active")
-    .order("created_at", { ascending: false });
+  const nextBookings = (rawNextBookings ?? []).map((booking) => ({
+    ...booking,
+    clients: Array.isArray(booking.clients) ? booking.clients[0] ?? null : booking.clients,
+    services: Array.isArray(booking.services) ? booking.services[0] ?? null : booking.services,
+    staff: Array.isArray(booking.staff) ? booking.staff[0] ?? null : booking.staff,
+  }));
 
-  const { data: settingsRow } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "staff_invite_code")
-    .single();
-
-  const activeStaffOptions = (allStaff ?? []).filter((s) => s.active);
-
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("id, full_name, phone, email, city")
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const { data: blockedDates } = await supabase
-    .from("blocked_dates")
-    .select("*")
-    .gte("date", new Date().toISOString().slice(0, 10))
-    .order("date");
+  const cards = [
+    { label: "Pending requests", value: requestedCount ?? 0, href: "/admin/bookings" },
+    { label: "Unassigned", value: unassignedCount ?? 0, href: "/admin/bookings" },
+    { label: "Next 7 days", value: weekCount ?? 0, href: "/admin/calendar" },
+  ];
 
   return (
-    <main className="min-h-screen bg-cream">
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-3">
-            <HouseMark className="w-10 h-10" />
-            <p className="font-display text-xl text-sage-deep">Admin Dashboard</p>
-          </div>
-          <LogoutButton />
-        </div>
-
-        <section className="mb-14">
-          <h2 className="font-display text-2xl text-sage-deep mb-5">
-            Upcoming Bookings ({bookings?.length ?? 0})
-          </h2>
-          <AdminNewBookingForm services={services ?? []} staffOptions={activeStaffOptions} />
-          <div className="space-y-3">
-            {(bookings ?? []).length === 0 && (
-              <p className="text-charcoal-soft">No upcoming bookings yet.</p>
-            )}
-            {(bookings ?? []).map((b) => {
-              const clients = Array.isArray(b.clients) ? b.clients[0] : b.clients;
-              const services = Array.isArray(b.services) ? b.services[0] : b.services;
-              return (
-                <BookingRow
-                  key={b.id}
-                  booking={{ ...b, clients: clients ?? null, services: services ?? null }}
-                  staffOptions={activeStaffOptions}
-                />
-              );
-            })}
-          </div>
-        </section>
-
-        <div className="hairline mb-14" />
-
-        <section className="mb-14">
-          <h2 className="font-display text-2xl text-sage-deep mb-5">Staff</h2>
-          <StaffPanel staff={allStaff ?? []} inviteCode={settingsRow?.value ?? ""} />
-        </section>
-
-        <div className="hairline mb-14" />
-
-        <section className="mb-14">
-          <h2 className="font-display text-2xl text-sage-deep mb-5">Blocked Dates</h2>
-          <BlockDateForm />
-          <div className="mt-5 flex flex-wrap gap-2">
-            {(blockedDates ?? []).map((d) => (
-              <span key={d.id} className="tracked-caps text-xs bg-sage-tint text-sage-deep px-3 py-1.5 rounded-full">
-                {d.date} {d.reason ? `· ${d.reason}` : ""}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        <div className="hairline mb-14" />
-
-        <section>
-          <h2 className="font-display text-2xl text-sage-deep mb-5">
-            Clients ({clients?.length ?? 0})
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="tracked-caps text-charcoal-soft/70 border-b border-line">
-                  <th className="py-2 pr-4">Name</th>
-                  <th className="py-2 pr-4">Phone</th>
-                  <th className="py-2 pr-4">Email</th>
-                  <th className="py-2 pr-4">City</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(clients ?? []).map((c) => (
-                  <tr key={c.id} className="border-b border-line/60">
-                    <td className="py-2 pr-4">{c.full_name}</td>
-                    <td className="py-2 pr-4">{c.phone}</td>
-                    <td className="py-2 pr-4">{c.email ?? "—"}</td>
-                    <td className="py-2 pr-4">{c.city ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+    <AdminShell title="Overview" description="The work that needs your attention right now.">
+      <div className="grid sm:grid-cols-3 gap-4 mb-10">
+        {cards.map((card) => (
+          <Link key={card.label} href={card.href} className="border border-line rounded-xl p-5 hover:border-sage-deep hover:-translate-y-0.5 transition-all">
+            <p className="tracked-caps text-xs text-charcoal-soft">{card.label}</p>
+            <p className="font-display text-4xl text-sage-deep mt-3">{card.value}</p>
+          </Link>
+        ))}
       </div>
-    </main>
+
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <h2 className="font-display text-2xl text-sage-deep">Next Bookings</h2>
+        <Link href="/admin/bookings" className="tracked-caps text-xs text-sage-deep underline underline-offset-4">Manage all</Link>
+      </div>
+      <div className="space-y-3">
+        {nextBookings.length === 0 ? <p className="text-charcoal-soft">No upcoming bookings.</p> : null}
+        {nextBookings.map((booking) => (
+          <Link
+            key={booking.id}
+            href={`/admin/bookings?booking=${booking.id}`}
+            className="border border-line rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-sage-deep transition-colors"
+          >
+            <div>
+              <p className="font-display text-lg text-sage-deep">
+                {new Date(booking.start_time).toLocaleString("en-US", {
+                  timeZone: TZ,
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
+              <p className="text-charcoal-soft mt-1">{booking.services?.name} — {booking.clients?.full_name}</p>
+              <p className="text-sm text-charcoal-soft/70 mt-1">
+                {booking.staff?.full_name ?? "Unassigned"}
+              </p>
+            </div>
+            <span className="tracked-caps text-xs bg-sage-tint text-sage-deep rounded-full px-3 py-1.5 self-start sm:self-center">
+              {booking.status}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </AdminShell>
   );
 }
