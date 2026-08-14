@@ -12,377 +12,588 @@ type Service = {
 };
 
 type Recurrence = "none" | "weekly" | "biweekly" | "monthly";
+type Intake = {
+  homeSize: string;
+  bedrooms: string;
+  bathrooms: string;
+  condition: string;
+};
+type Contact = {
+  fullName: string;
+  phone: string;
+  email: string;
+  address1: string;
+  address2: string;
+  city: string;
+  zip: string;
+  notes: string;
+};
 
 const TZ = "America/New_York";
+const PHONE_DISPLAY = "304-491-5175";
+const PHONE_HREF = "tel:+13044915175";
 
-function nextNDays(n: number) {
-  const days: Date[] = [];
+const cityOptions = [
+  "Morgantown",
+  "Fairmont",
+  "Clarksburg",
+  "Westover",
+  "Star City",
+  "Granville",
+  "Brookhaven",
+  "Cheat Lake",
+  "Suncrest",
+];
+
+const frequencies: Array<{ value: Recurrence; label: string; detail: string }> = [
+  { value: "none", label: "One time", detail: "One visit" },
+  { value: "weekly", label: "Weekly", detail: "Preference only" },
+  { value: "biweekly", label: "Every 2 weeks", detail: "Preference only" },
+  { value: "monthly", label: "Monthly", detail: "Preference only" },
+];
+
+function nextNDays(count: number) {
+  const result: Date[] = [];
   const today = new Date();
-  for (let i = 0; i < n; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    days.push(d);
+  for (let index = 0; index < count; index += 1) {
+    const day = new Date(today);
+    day.setDate(today.getDate() + index);
+    day.setHours(12, 0, 0, 0);
+    result.push(day);
   }
-  return days;
+  return result;
 }
 
-function dateKey(d: Date) {
-  return d.toLocaleDateString("en-CA", { timeZone: TZ }); // YYYY-MM-DD
+function dateKey(date: Date) {
+  return date.toLocaleDateString("en-CA", { timeZone: TZ });
+}
+
+function money(cents: number | null) {
+  return cents == null ? "Custom quote" : `Starting at $${(cents / 100).toFixed(0)}`;
+}
+
+function serviceSubtitle(service: Service) {
+  const lower = service.name.toLowerCase();
+  if (lower.includes("standard")) return "Routine upkeep for an already maintained home";
+  if (lower.includes("deep")) return "A detailed reset, ideal for a first visit";
+  if (lower.includes("move")) return "For an empty home before or after moving";
+  if (lower.includes("commercial")) return "Custom scope and quote";
+  return service.description ?? "Professional cleaning tailored to your space";
 }
 
 export function BookingFlow({ services }: { services: Service[] }) {
   const supabase = useMemo(() => createClient(), []);
+  const days = useMemo(() => nextNDays(14), []);
+
   const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [slots, setSlots] = useState<string[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [intake, setIntake] = useState<Intake>({
+    homeSize: "",
+    bedrooms: "",
+    bathrooms: "",
+    condition: "",
+  });
   const [recurrence, setRecurrence] = useState<Recurrence>("none");
-  const [form, setForm] = useState({
+  const [availability, setAvailability] = useState<Record<string, string[]>>({});
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [selectedDateKey, setSelectedDateKey] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [contact, setContact] = useState<Contact>({
     fullName: "",
     phone: "",
     email: "",
     address1: "",
     address2: "",
+    city: "Morgantown",
     zip: "",
     notes: "",
   });
+  const [consultationType, setConsultationType] = useState<"help" | "commercial" | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmedCount, setConfirmedCount] = useState<number | null>(null);
-
-  const days = useMemo(() => nextNDays(21), []);
+  const [complete, setComplete] = useState<"booking" | "consultation" | null>(null);
 
   useEffect(() => {
-    if (!selectedService || !selectedDate) return;
-    setLoadingSlots(true);
-    setSelectedSlot(null);
-    setError(null);
-    supabase
-      .rpc("get_available_slots", {
-        p_date: dateKey(selectedDate),
-        p_service_id: selectedService.id,
-      })
-      .then(({ data, error }) => {
-        if (error) {
-          setError("Couldn't load available times. Please try again.");
-          setSlots([]);
-        } else {
-          setSlots((data ?? []).map((row: { slot_start: string }) => row.slot_start));
-        }
-        setLoadingSlots(false);
-      });
-  }, [selectedService, selectedDate, supabase]);
+    if (step !== 3 || !selectedService) return;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedService || !selectedSlot) return;
+    let cancelled = false;
+    setLoadingAvailability(true);
+    setError(null);
+
+    Promise.all(
+      days.map(async (day) => {
+        const key = dateKey(day);
+        const { data, error: slotError } = await supabase.rpc("get_available_slots", {
+          p_date: key,
+          p_service_id: selectedService.id,
+        });
+        if (slotError) throw slotError;
+        const allSlots = (data ?? []).map((row: { slot_start: string }) => row.slot_start);
+        const hourlySlots = allSlots.filter((slot: string) => new Date(slot).getMinutes() === 0);
+        return [key, hourlySlots.length > 0 ? hourlySlots : allSlots] as const;
+      })
+    )
+      .then((entries) => {
+        if (cancelled) return;
+        const nextAvailability = Object.fromEntries(entries);
+        setAvailability(nextAvailability);
+        const firstAvailable = entries.find(([, slots]) => slots.length > 0)?.[0] ?? "";
+        setSelectedDateKey((current) => current || firstAvailable);
+      })
+      .catch(() => {
+        if (!cancelled) setError("We couldn't load availability. Please try again or call/text Basima.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAvailability(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [days, selectedService, step, supabase]);
+
+  function chooseService(service: Service) {
+    setSelectedService(service);
+    setError(null);
+    if (service.name.toLowerCase().includes("commercial")) {
+      setConsultationType("commercial");
+      return;
+    }
+    setConsultationType(null);
+    setStep(2);
+  }
+
+  function continueToSchedule() {
+    if (!intake.homeSize || !intake.bedrooms || !intake.bathrooms || !intake.condition) {
+      setError("Tell us a little about your home so we can provide an accurate starting estimate.");
+      return;
+    }
+    setError(null);
+    setStep(3);
+  }
+
+  async function submitConsultation(event: React.FormEvent) {
+    event.preventDefault();
     setSubmitting(true);
     setError(null);
 
-    const { data, error } = await supabase.rpc("create_booking", {
-      p_service_id: selectedService.id,
-      p_start_time: selectedSlot,
-      p_full_name: form.fullName,
-      p_phone: form.phone,
-      p_email: form.email || null,
-      p_address_line1: form.address1,
-      p_address_line2: form.address2 || null,
-      p_zip: form.zip,
-      p_notes: form.notes || null,
-      p_recurrence: recurrence,
+    const heading = consultationType === "commercial" ? "Commercial cleaning quote request" : "Help choosing a cleaning";
+    const message = [
+      heading,
+      `Preferred city: ${contact.city}`,
+      contact.notes ? `Message: ${contact.notes}` : "Please call to discuss cleaning needs.",
+    ].join("\n");
+
+    const { error: insertError } = await supabase.from("contact_inquiries").insert({
+      full_name: contact.fullName.trim(),
+      phone: contact.phone.trim(),
+      email: contact.email.trim() || null,
+      message,
     });
 
     setSubmitting(false);
-
-    if (error) {
-      setError(error.message.includes("just booked")
-        ? "That time was just booked by someone else — please pick another."
-        : "Something went wrong submitting your booking. Please try again or call/text 304-491-5175.");
+    if (insertError) {
+      setError("We couldn't send your request. Please call or text Basima instead.");
       return;
     }
 
-    if (!data) {
-      setError("Something went wrong submitting your booking. Please call/text 304-491-5175.");
-      return;
-    }
-
-    const counts: Record<Recurrence, number> = { none: 1, weekly: 12, biweekly: 8, monthly: 6 };
-    setConfirmedCount(counts[recurrence]);
-    setStep(5);
-
-    // fire-and-forget owner notification — booking is already saved either way
-    supabase.functions
-      .invoke("notify-owner", {
-        body: {
-          type: "booking",
-          full_name: form.fullName,
-          phone: form.phone,
-          email: form.email,
-          service_name: selectedService.name,
-          start_time: new Date(selectedSlot).toLocaleString("en-US", {
-            timeZone: TZ,
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          }),
-          recurrence,
-          address: `${form.address1}${form.address2 ? ", " + form.address2 : ""}, ${form.zip}`,
-          notes: form.notes,
-        },
-      })
-      .catch(() => {
-        // booking already saved; email is best-effort
-      });
+    setComplete("consultation");
+    supabase.functions.invoke("notify-owner", {
+      body: {
+        type: "contact",
+        full_name: contact.fullName,
+        phone: contact.phone,
+        email: contact.email,
+        message,
+      },
+    }).catch(() => undefined);
   }
 
-  if (step === 5) {
+  async function submitBooking(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedService || !selectedSlot) return;
+
+    setSubmitting(true);
+    setError(null);
+    const { data, error: bookingError } = await supabase.rpc("create_booking_v2", {
+      p_service_id: selectedService.id,
+      p_start_time: selectedSlot,
+      p_full_name: contact.fullName,
+      p_phone: contact.phone,
+      p_email: contact.email || null,
+      p_address_line1: contact.address1,
+      p_address_line2: contact.address2 || null,
+      p_city: contact.city,
+      p_zip: contact.zip,
+      p_notes: contact.notes || null,
+      p_recurrence: recurrence,
+      p_intake: {
+        home_size: intake.homeSize,
+        bedrooms: intake.bedrooms,
+        bathrooms: intake.bathrooms,
+        condition: intake.condition,
+      },
+    });
+
+    setSubmitting(false);
+    if (bookingError || !data) {
+      setError(
+        bookingError?.message.includes("just booked")
+          ? "That time was just booked. Please choose another available time."
+          : bookingError?.message || "We couldn't submit your request. Please call or text Basima."
+      );
+      return;
+    }
+
+    setComplete("booking");
+    supabase.functions.invoke("notify-owner", {
+      body: {
+        type: "booking",
+        full_name: contact.fullName,
+        phone: contact.phone,
+        email: contact.email,
+        service_name: selectedService.name,
+        start_time: new Date(selectedSlot).toLocaleString("en-US", {
+          timeZone: TZ,
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+        recurrence,
+        address: `${contact.address1}${contact.address2 ? ", " + contact.address2 : ""}, ${contact.city}, WV ${contact.zip}`,
+        notes: `${contact.notes}\nHome: ${intake.homeSize}, ${intake.bedrooms} bedrooms, ${intake.bathrooms} bathrooms, ${intake.condition}`,
+      },
+    }).catch(() => undefined);
+  }
+
+  if (complete) {
     return (
-      <div className="text-center py-16">
-        <p className="tracked-caps text-gold mb-3">Request Received</p>
-        <h2 className="font-display text-3xl text-sage-deep mb-4">Thank you, {form.fullName.split(" ")[0]}.</h2>
-        <p className="text-charcoal-soft max-w-md mx-auto leading-relaxed">
-          Your cleaning{confirmedCount && confirmedCount > 1 ? ` (and ${confirmedCount - 1} recurring visit${confirmedCount - 1 > 1 ? "s" : ""})` : ""} has
-          been requested for{" "}
-          <strong>
-            {selectedSlot &&
-              new Date(selectedSlot).toLocaleString("en-US", {
-                timeZone: TZ,
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-          </strong>
-          . Basima will confirm shortly by phone or text at {form.phone}.
+      <div className="text-center py-14 sm:py-16 border border-line rounded-2xl px-6">
+        <p className="tracked-caps text-gold mb-3">
+          {complete === "booking" ? "Request Received" : "We'll Help You Choose"}
         </p>
+        <h2 className="font-display text-3xl text-sage-deep mb-4">
+          Thank you{contact.fullName ? `, ${contact.fullName.split(" ")[0]}` : ""}.
+        </h2>
+        <p className="text-charcoal-soft max-w-md mx-auto leading-relaxed">
+          {complete === "booking"
+            ? "Basima will review your home details, confirm the final price, and confirm your requested appointment by phone or text."
+            : "Basima will call or text you to talk through your space, recommend the right cleaning, and provide a clear estimate."}
+        </p>
+        <a href={PHONE_HREF} className="inline-block mt-7 tracked-caps text-sage-deep underline underline-offset-4">
+          Call or text {PHONE_DISPLAY}
+        </a>
       </div>
     );
   }
 
+  if (consultationType) {
+    return (
+      <ConsultationForm
+        type={consultationType}
+        contact={contact}
+        setContact={setContact}
+        submitting={submitting}
+        error={error}
+        onBack={() => {
+          setConsultationType(null);
+          setError(null);
+        }}
+        onSubmit={submitConsultation}
+      />
+    );
+  }
+
+  const selectedDate = days.find((day) => dateKey(day) === selectedDateKey);
+  const selectedSlots = selectedDateKey ? availability[selectedDateKey] ?? [] : [];
+  const frequency = frequencies.find((item) => item.value === recurrence);
+  const canContinueHome = Boolean(intake.homeSize && intake.bedrooms && intake.bathrooms && intake.condition);
+
   return (
     <div>
-      {/* progress */}
-      <div className="flex items-center justify-center gap-2 mb-10">
-        {[1, 2, 3, 4].map((n) => (
-          <div
-            key={n}
-            className={`h-1.5 w-10 rounded-full ${step >= n ? "bg-sage-deep" : "bg-line"}`}
-          />
+      <div className="flex items-center justify-center gap-2 mb-8" aria-label={`Step ${step} of 4`}>
+        {[1, 2, 3, 4].map((number) => (
+          <div key={number} className={`h-1.5 w-10 rounded-full ${step >= number ? "bg-sage-deep" : "bg-line"}`} />
         ))}
       </div>
 
-      {step === 1 && (
-        <div>
-          <h2 className="font-display text-2xl text-sage-deep mb-6 text-center">Choose a service</h2>
+      {step === 1 ? (
+        <section>
+          <h2 className="font-display text-3xl sm:text-4xl text-sage-deep text-center">What can we help with?</h2>
+          <p className="text-center text-charcoal-soft mt-3 mb-7">Choose a service, or let us help you decide.</p>
           <div className="space-y-3">
-            {services.map((s) => (
+            {services.map((service) => (
               <button
-                key={s.id}
-                onClick={() => {
-                  setSelectedService(s);
-                  setStep(2);
-                }}
-                className="w-full text-left border border-line rounded-xl p-5 hover:border-sage-deep hover:bg-sage-tint transition-colors"
+                key={service.id}
+                type="button"
+                onClick={() => chooseService(service)}
+                className="w-full text-left border border-line rounded-xl px-4 py-4 flex items-center justify-between gap-4 hover:border-sage-deep hover:bg-sage-tint/30 transition-colors"
               >
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <p className="font-display text-lg text-sage-deep">{s.name}</p>
-                    <p className="text-sm text-charcoal-soft mt-1">{s.description}</p>
-                  </div>
-                  <p className="text-gold font-display shrink-0">
-                    {s.base_price_cents ? `$${(s.base_price_cents / 100).toFixed(0)}` : "Quote"}
-                  </p>
-                </div>
+                <span>
+                  <span className="font-display text-lg text-sage-deep block">{service.name}</span>
+                  <span className="text-sm text-charcoal-soft block mt-1">{serviceSubtitle(service)}</span>
+                  <span className="text-sm text-gold block mt-1">{money(service.base_price_cents)}</span>
+                </span>
+                <span className="text-xl text-sage-deep" aria-hidden="true">›</span>
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setConsultationType("help")}
+              className="w-full text-left border border-gold rounded-xl px-4 py-4 flex items-center justify-between gap-4 hover:bg-sage-tint/30 transition-colors"
+            >
+              <span>
+                <span className="font-display text-lg text-sage-deep block">Not sure? Help me choose</span>
+                <span className="text-sm text-charcoal-soft block mt-1">Talk with Basima before deciding.</span>
+              </span>
+              <span className="text-xl text-sage-deep" aria-hidden="true">›</span>
+            </button>
           </div>
-        </div>
-      )}
+          <a href={PHONE_HREF} className="flex justify-center mt-7 text-sage-deep underline underline-offset-4">
+            Call or text Basima · {PHONE_DISPLAY}
+          </a>
+        </section>
+      ) : null}
 
-      {step === 2 && selectedService && (
-        <div>
-          <button onClick={() => setStep(1)} className="tracked-caps text-charcoal-soft mb-6">
-            ← Back
+      {step === 2 && selectedService ? (
+        <section>
+          <BackButton onClick={() => setStep(1)} />
+          <h2 className="font-display text-3xl sm:text-4xl text-sage-deep text-center">Tell us about your home</h2>
+          <p className="text-center text-charcoal-soft mt-3 mb-7">This helps Basima confirm an accurate price before your visit.</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <SelectField label="Home size" value={intake.homeSize} onChange={(value) => setIntake({ ...intake, homeSize: value })} options={["Apartment", "Under 1,000 sq ft", "1,000–2,000 sq ft", "2,000–3,000 sq ft", "3,000–4,000 sq ft", "Over 4,000 sq ft"]} />
+            <SelectField label="Bedrooms" value={intake.bedrooms} onChange={(value) => setIntake({ ...intake, bedrooms: value })} options={["Studio", "1", "2", "3", "4", "5+"]} />
+            <SelectField label="Bathrooms" value={intake.bathrooms} onChange={(value) => setIntake({ ...intake, bathrooms: value })} options={["1", "1.5", "2", "2.5", "3", "4+"]} />
+            <SelectField label="Current condition" value={intake.condition} onChange={(value) => setIntake({ ...intake, condition: value })} options={["Light upkeep", "Typical lived-in", "Needs extra attention", "Heavy buildup"]} />
+          </div>
+
+          <fieldset className="mt-7">
+            <legend className="font-display text-xl text-sage-deep mb-3">How often would you like cleaning?</legend>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {frequencies.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setRecurrence(item.value)}
+                  className={`border rounded-xl py-3 px-2 text-sm transition-colors ${recurrence === item.value ? "bg-sage-deep border-sage-deep text-cream" : "border-line hover:border-sage-deep"}`}
+                >
+                  <span className="block">{item.label}</span>
+                  <span className="block text-[11px] mt-1 opacity-70">{item.detail}</span>
+                </button>
+              ))}
+            </div>
+            {recurrence !== "none" ? (
+              <p className="text-sm text-charcoal-soft mt-3">
+                We’ll request the first visit now. Basima will confirm your continuing schedule with you.
+              </p>
+            ) : null}
+          </fieldset>
+          {error ? <ErrorMessage message={error} /> : null}
+          <button type="button" disabled={!canContinueHome} onClick={continueToSchedule} className="w-full mt-7 tracked-caps bg-sage-deep text-cream px-7 py-4 rounded-full disabled:opacity-40">
+            See Dates & Times
           </button>
-          <h2 className="font-display text-2xl text-sage-deep mb-6 text-center">Choose a date</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            {days.map((d) => {
-              const isSelected = selectedDate && dateKey(selectedDate) === dateKey(d);
+        </section>
+      ) : null}
+
+      {step === 3 && selectedService ? (
+        <section>
+          <BackButton onClick={() => setStep(2)} />
+          <h2 className="font-display text-3xl sm:text-4xl text-sage-deep text-center">Choose a day</h2>
+          <div className="border border-line bg-sage-tint/25 rounded-xl p-4 mt-6 mb-6">
+            <p className="font-display text-lg text-sage-deep">{selectedService.name}</p>
+            <p className="text-gold text-sm mt-1">{money(selectedService.base_price_cents)}</p>
+            <p className="text-xs text-charcoal-soft mt-1">Final price confirmed before your visit.</p>
+          </div>
+
+          <p className="tracked-caps text-xs text-charcoal-soft mb-3">Available during the next 14 days</p>
+          <div className="flex gap-3 overflow-x-auto pb-3 snap-x" aria-label="Choose a date">
+            {days.map((day) => {
+              const key = dateKey(day);
+              const slots = availability[key];
+              const unavailable = !loadingAvailability && slots?.length === 0;
+              const active = selectedDateKey === key;
               return (
                 <button
-                  key={dateKey(d)}
+                  key={key}
+                  type="button"
+                  disabled={loadingAvailability || unavailable}
                   onClick={() => {
-                    setSelectedDate(d);
-                    setStep(3);
+                    setSelectedDateKey(key);
+                    setSelectedSlot("");
                   }}
-                  className={`border rounded-lg py-3 px-2 text-center transition-colors ${
-                    isSelected
-                      ? "bg-sage-deep text-cream border-sage-deep"
-                      : "border-line hover:border-sage-deep"
-                  }`}
+                  className={`shrink-0 w-[82px] snap-start border rounded-xl px-3 py-3 text-center transition-colors ${active ? "bg-sage-deep border-sage-deep text-cream" : unavailable ? "border-line text-charcoal-soft/40" : "border-line hover:border-sage-deep"}`}
                 >
-                  <p className="tracked-caps text-xs opacity-70">
-                    {d.toLocaleDateString("en-US", { timeZone: TZ, weekday: "short" })}
-                  </p>
-                  <p className="font-display text-lg">
-                    {d.toLocaleDateString("en-US", { timeZone: TZ, month: "short", day: "numeric" })}
-                  </p>
+                  <span className="tracked-caps text-[11px] block">{day.toLocaleDateString("en-US", { timeZone: TZ, weekday: "short" })}</span>
+                  <span className="font-display text-base block mt-1">{day.toLocaleDateString("en-US", { timeZone: TZ, month: "short", day: "numeric" })}</span>
+                  <span className="block mt-1 text-xs" aria-hidden="true">{unavailable ? "—" : "●"}</span>
                 </button>
               );
             })}
           </div>
-        </div>
-      )}
 
-      {step === 3 && selectedService && selectedDate && (
-        <div>
-          <button onClick={() => setStep(2)} className="tracked-caps text-charcoal-soft mb-6">
-            ← Back
-          </button>
-          <h2 className="font-display text-2xl text-sage-deep mb-2 text-center">Choose a time</h2>
-          <p className="text-center text-charcoal-soft mb-6">
-            {selectedDate.toLocaleDateString("en-US", {
-              timeZone: TZ,
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-          {loadingSlots && <p className="text-center text-charcoal-soft">Loading times…</p>}
-          {!loadingSlots && slots.length === 0 && (
-            <p className="text-center text-charcoal-soft">
-              No openings this day. Please choose another date.
-            </p>
-          )}
-          <div className="grid grid-cols-3 gap-3">
-            {slots.map((s) => (
+          <h3 className="font-display text-xl text-sage-deep mt-6 mb-3">
+            {selectedDate ? "Choose a time" : loadingAvailability ? "Finding openings…" : "No openings in the next two weeks"}
+          </h3>
+          <div className="flex gap-3 overflow-x-auto pb-3 snap-x">
+            {selectedSlots.map((slot) => (
               <button
-                key={s}
-                onClick={() => {
-                  setSelectedSlot(s);
-                  setStep(4);
-                }}
-                className="border border-line rounded-lg py-3 text-center hover:border-sage-deep hover:bg-sage-tint transition-colors font-display text-sage-deep"
+                key={slot}
+                type="button"
+                onClick={() => setSelectedSlot(slot)}
+                className={`shrink-0 min-w-[108px] snap-start border rounded-xl px-4 py-3 transition-colors ${selectedSlot === slot ? "bg-sage-deep border-sage-deep text-cream" : "border-line hover:border-sage-deep"}`}
               >
-                {new Date(s).toLocaleTimeString("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" })}
+                {new Date(slot).toLocaleTimeString("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" })}
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {step === 4 && selectedService && selectedSlot && (
-        <form onSubmit={handleSubmit}>
-          <button type="button" onClick={() => setStep(3)} className="tracked-caps text-charcoal-soft mb-6">
-            ← Back
+          <a href={PHONE_HREF} className="block text-center mt-5 text-sage-deep underline underline-offset-4">
+            Need another time? Call or text us.
+          </a>
+          {error ? <ErrorMessage message={error} /> : null}
+          <button type="button" disabled={!selectedSlot} onClick={() => setStep(4)} className="w-full mt-7 tracked-caps bg-sage-deep text-cream px-7 py-4 rounded-full disabled:opacity-40">
+            Continue
           </button>
-          <h2 className="font-display text-2xl text-sage-deep mb-2 text-center">Your details</h2>
-          <p className="text-center text-charcoal-soft mb-8">
-            {selectedService.name} —{" "}
-            {new Date(selectedSlot).toLocaleString("en-US", {
-              timeZone: TZ,
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </p>
+        </section>
+      ) : null}
 
-          <div className="space-y-4">
-            <input
-              required
-              placeholder="Full name"
-              className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-            />
-            <input
-              required
-              type="tel"
-              placeholder="Phone"
-              className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            />
-            <input
-              type="email"
-              placeholder="Email (optional)"
-              className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-            <input
-              required
-              placeholder="Address"
-              className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none"
-              value={form.address1}
-              onChange={(e) => setForm({ ...form, address1: e.target.value })}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                placeholder="Apt / Unit (optional)"
-                className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none"
-                value={form.address2}
-                onChange={(e) => setForm({ ...form, address2: e.target.value })}
-              />
-              <input
-                required
-                placeholder="ZIP code"
-                className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none"
-                value={form.zip}
-                onChange={(e) => setForm({ ...form, zip: e.target.value })}
-              />
-            </div>
-            <textarea
-              placeholder="Anything we should know? (pets, gate code, parking, etc.)"
-              className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none min-h-[90px]"
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            />
-
-            <div>
-              <label className="tracked-caps text-charcoal-soft block mb-2">Repeat this cleaning?</label>
-              <div className="grid grid-cols-2 gap-3">
-                {([
-                  ["none", "One time"],
-                  ["weekly", "Weekly"],
-                  ["biweekly", "Every 2 weeks"],
-                  ["monthly", "Monthly"],
-                ] as [Recurrence, string][]).map(([val, label]) => (
-                  <button
-                    type="button"
-                    key={val}
-                    onClick={() => setRecurrence(val)}
-                    className={`border rounded-lg py-2.5 text-sm transition-colors ${
-                      recurrence === val
-                        ? "bg-sage-deep text-cream border-sage-deep"
-                        : "border-line hover:border-sage-deep"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {step === 4 && selectedService && selectedSlot ? (
+        <section>
+          <BackButton onClick={() => setStep(3)} />
+          <h2 className="font-display text-3xl sm:text-4xl text-sage-deep text-center">Review your request</h2>
+          <div className="border border-line bg-sage-tint/25 rounded-xl p-5 mt-6 mb-7">
+            <p className="font-display text-xl text-sage-deep">{selectedService.name}</p>
+            <p className="text-charcoal-soft mt-2">
+              {new Date(selectedSlot).toLocaleString("en-US", { timeZone: TZ, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </p>
+            <p className="text-sm text-charcoal-soft mt-1">{intake.bedrooms} bedrooms · {intake.bathrooms} bathrooms · {frequency?.label}</p>
+            <p className="text-gold mt-3">{money(selectedService.base_price_cents)}</p>
           </div>
 
-          {error && <p className="text-red-700 text-sm mt-4">{error}</p>}
+          <form onSubmit={submitBooking} className="space-y-4">
+            <TextField label="Full name" value={contact.fullName} onChange={(value) => setContact({ ...contact, fullName: value })} required autoComplete="name" />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <TextField label="Phone" type="tel" value={contact.phone} onChange={(value) => setContact({ ...contact, phone: value })} required autoComplete="tel" />
+              <TextField label="Email (optional)" type="email" value={contact.email} onChange={(value) => setContact({ ...contact, email: value })} autoComplete="email" />
+            </div>
+            <TextField label="Street address" value={contact.address1} onChange={(value) => setContact({ ...contact, address1: value })} required autoComplete="address-line1" />
+            <div className="grid sm:grid-cols-3 gap-4">
+              <TextField label="Apt / unit" value={contact.address2} onChange={(value) => setContact({ ...contact, address2: value })} autoComplete="address-line2" />
+              <SelectField label="City" value={contact.city} onChange={(value) => setContact({ ...contact, city: value })} options={cityOptions} />
+              <TextField label="ZIP code" value={contact.zip} onChange={(value) => setContact({ ...contact, zip: value })} required autoComplete="postal-code" />
+            </div>
+            <label className="block">
+              <span className="tracked-caps text-xs text-charcoal-soft block mb-1">Anything we should know? (optional)</span>
+              <textarea value={contact.notes} onChange={(event) => setContact({ ...contact, notes: event.target.value })} className="w-full border border-line rounded-lg px-4 py-3 min-h-24 focus:border-sage-deep outline-none" />
+            </label>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full mt-8 tracked-caps bg-sage-deep text-cream px-8 py-4 rounded-full hover:bg-[#324a2c] transition-colors disabled:opacity-60"
-          >
-            {submitting ? "Submitting…" : "Request Booking"}
-          </button>
-        </form>
-      )}
+            <div className="border-t border-line pt-5 space-y-2 text-sm text-charcoal-soft">
+              <p>✓ No payment due today</p>
+              <p>✓ Basima will confirm by phone or text</p>
+              <p>✓ Final price confirmed before your visit</p>
+              {recurrence !== "none" ? <p>✓ Only the first visit is requested today</p> : null}
+            </div>
+            {error ? <ErrorMessage message={error} /> : null}
+            <button disabled={submitting} className="w-full tracked-caps bg-sage-deep text-cream px-7 py-4 rounded-full disabled:opacity-50">
+              {submitting ? "Sending Request…" : "Request Booking"}
+            </button>
+            <p className="text-xs text-center text-charcoal-soft">Your information is used only to arrange your cleaning.</p>
+          </form>
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+function ConsultationForm({
+  type,
+  contact,
+  setContact,
+  submitting,
+  error,
+  onBack,
+  onSubmit,
+}: {
+  type: "help" | "commercial";
+  contact: Contact;
+  setContact: (contact: Contact) => void;
+  submitting: boolean;
+  error: string | null;
+  onBack: () => void;
+  onSubmit: (event: React.FormEvent) => void;
+}) {
+  return (
+    <section>
+      <BackButton onClick={onBack} />
+      <h2 className="font-display text-3xl sm:text-4xl text-sage-deep text-center">
+        {type === "commercial" ? "Request a commercial quote" : "Let us help you choose"}
+      </h2>
+      <p className="text-center text-charcoal-soft mt-3 mb-7">
+        Tell us how to reach you. Basima will talk through the space and recommend the right service.
+      </p>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <TextField label="Full name" value={contact.fullName} onChange={(value) => setContact({ ...contact, fullName: value })} required autoComplete="name" />
+        <div className="grid sm:grid-cols-2 gap-4">
+          <TextField label="Phone" type="tel" value={contact.phone} onChange={(value) => setContact({ ...contact, phone: value })} required autoComplete="tel" />
+          <TextField label="Email (optional)" type="email" value={contact.email} onChange={(value) => setContact({ ...contact, email: value })} autoComplete="email" />
+        </div>
+        <SelectField label="Preferred service area" value={contact.city} onChange={(value) => setContact({ ...contact, city: value })} options={cityOptions} />
+        <label className="block">
+          <span className="tracked-caps text-xs text-charcoal-soft block mb-1">What would you like help with?</span>
+          <textarea required value={contact.notes} onChange={(event) => setContact({ ...contact, notes: event.target.value })} className="w-full border border-line rounded-lg px-4 py-3 min-h-28 focus:border-sage-deep outline-none" placeholder={type === "commercial" ? "Business type, approximate size, preferred frequency…" : "Tell us about your home or what you would like cleaned…"} />
+        </label>
+        {error ? <ErrorMessage message={error} /> : null}
+        <button disabled={submitting} className="w-full tracked-caps bg-sage-deep text-cream px-7 py-4 rounded-full disabled:opacity-50">
+          {submitting ? "Sending…" : "Ask Basima to Contact Me"}
+        </button>
+      </form>
+      <a href={PHONE_HREF} className="block text-center mt-6 text-sage-deep underline underline-offset-4">
+        Prefer to talk now? Call or text {PHONE_DISPLAY}
+      </a>
+    </section>
+  );
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return <button type="button" onClick={onClick} className="tracked-caps text-xs text-charcoal-soft mb-6 hover:text-sage-deep">← Back</button>;
+}
+
+function ErrorMessage({ message }: { message: string }) {
+  return <p className="text-red-700 text-sm mt-4" role="alert">{message}</p>;
+}
+
+function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+  return (
+    <label className="block">
+      <span className="tracked-caps text-xs text-charcoal-soft block mb-1">{label}</span>
+      <select required value={value} onChange={(event) => onChange(event.target.value)} className="w-full border border-line rounded-lg px-4 py-3 bg-cream focus:border-sage-deep outline-none">
+        <option value="">Select</option>
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+  autoComplete?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="tracked-caps text-xs text-charcoal-soft block mb-1">{label}</span>
+      <input required={required} type={type} autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} className="w-full border border-line rounded-lg px-4 py-3 focus:border-sage-deep outline-none" />
+    </label>
   );
 }
