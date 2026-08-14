@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  CircleHelp,
+  House,
+  PackageOpen,
+  Phone,
+  Sparkles,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Service = {
@@ -70,6 +80,14 @@ function dateKey(date: Date) {
 
 function money(cents: number | null) {
   return cents == null ? "Custom quote" : `Starting at $${(cents / 100).toFixed(0)}`;
+}
+
+function ServiceIcon({ name, className = "w-7 h-7" }: { name: string; className?: string }) {
+  const lower = name.toLowerCase();
+  if (lower.includes("deep")) return <Sparkles className={className} strokeWidth={1.5} aria-hidden="true" />;
+  if (lower.includes("move")) return <PackageOpen className={className} strokeWidth={1.5} aria-hidden="true" />;
+  if (lower.includes("commercial")) return <Building2 className={className} strokeWidth={1.5} aria-hidden="true" />;
+  return <House className={className} strokeWidth={1.5} aria-hidden="true" />;
 }
 
 function serviceSubtitle(service: Service) {
@@ -331,12 +349,15 @@ export function BookingFlow({ services }: { services: Service[] }) {
                 onClick={() => chooseService(service)}
                 className="w-full text-left border border-line rounded-xl px-4 py-4 flex items-center justify-between gap-4 hover:border-sage-deep hover:bg-sage-tint/30 transition-colors"
               >
-                <span>
+                <span className="w-14 h-14 rounded-full bg-sage-tint flex items-center justify-center shrink-0 text-sage-deep">
+                  <ServiceIcon name={service.name} />
+                </span>
+                <span className="min-w-0 flex-1">
                   <span className="font-display text-lg text-sage-deep block">{service.name}</span>
                   <span className="text-sm text-charcoal-soft block mt-1">{serviceSubtitle(service)}</span>
-                  <span className="text-sm text-gold block mt-1">{money(service.base_price_cents)}</span>
+                  <span className="text-sm font-medium text-gold block mt-1">{money(service.base_price_cents)}</span>
                 </span>
-                <span className="text-xl text-sage-deep" aria-hidden="true">›</span>
+                <ChevronRight className="w-5 h-5 text-sage-deep shrink-0" aria-hidden="true" />
               </button>
             ))}
             <button
@@ -344,15 +365,18 @@ export function BookingFlow({ services }: { services: Service[] }) {
               onClick={() => setConsultationType("help")}
               className="w-full text-left border border-gold rounded-xl px-4 py-4 flex items-center justify-between gap-4 hover:bg-sage-tint/30 transition-colors"
             >
-              <span>
+              <span className="w-14 h-14 rounded-full border border-gold/60 flex items-center justify-center shrink-0 text-gold">
+                <CircleHelp className="w-7 h-7" strokeWidth={1.5} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
                 <span className="font-display text-lg text-sage-deep block">Not sure? Help me choose</span>
                 <span className="text-sm text-charcoal-soft block mt-1">Talk with Basima before deciding.</span>
               </span>
-              <span className="text-xl text-sage-deep" aria-hidden="true">›</span>
+              <ChevronRight className="w-5 h-5 text-sage-deep shrink-0" aria-hidden="true" />
             </button>
           </div>
-          <a href={PHONE_HREF} className="flex justify-center mt-7 text-sage-deep underline underline-offset-4">
-            Call or text Basima · {PHONE_DISPLAY}
+          <a href={PHONE_HREF} className="flex items-center justify-center gap-2 mt-7 text-sage-deep underline underline-offset-4">
+            <Phone className="w-5 h-5" aria-hidden="true" /> Call or text Basima · {PHONE_DISPLAY}
           </a>
         </section>
       ) : null}
@@ -401,13 +425,18 @@ export function BookingFlow({ services }: { services: Service[] }) {
         <section>
           <BackButton onClick={() => setStep(2)} />
           <h2 className="font-display text-3xl sm:text-4xl text-sage-deep text-center">Choose a day</h2>
-          <div className="border border-line bg-sage-tint/25 rounded-xl p-4 mt-6 mb-6">
-            <p className="font-display text-lg text-sage-deep">{selectedService.name}</p>
-            <p className="text-gold text-sm mt-1">{money(selectedService.base_price_cents)}</p>
-            <p className="text-xs text-charcoal-soft mt-1">Final price confirmed before your visit.</p>
+          <div className="border border-line bg-sage-tint/25 rounded-2xl p-4 mt-6 mb-6 flex items-center gap-4">
+            <span className="w-14 h-14 rounded-full bg-cream flex items-center justify-center shrink-0 text-sage-deep">
+              <ServiceIcon name={selectedService.name} />
+            </span>
+            <span>
+              <span className="font-display text-lg text-sage-deep block">{selectedService.name}</span>
+              <span className="text-gold text-sm block mt-1">{money(selectedService.base_price_cents)}</span>
+              <span className="text-xs text-charcoal-soft block mt-1">Final price confirmed before your visit.</span>
+            </span>
           </div>
 
-          <p className="tracked-caps text-xs text-charcoal-soft mb-3">Available during the next 14 days</p>
+          <p className="tracked-caps text-xs text-charcoal-soft mb-3 flex items-center gap-2"><CalendarDays className="w-4 h-4" aria-hidden="true" /> Available during the next 14 days</p>
           <div className="flex gap-3 overflow-x-auto pb-3 snap-x" aria-label="Choose a date">
             {days.map((day) => {
               const key = dateKey(day);
