@@ -16,6 +16,7 @@ export function SiteFooter() {
           <p><Link href="/deep-cleaning-morgantown-wv">Deep cleaning</Link></p>
           <p><Link href="/move-in-move-out-cleaning-morgantown-wv">Move cleaning</Link></p>
           <p><Link href="/commercial-cleaning-morgantown-wv">Commercial cleaning</Link></p>
+          <p><Link href="/pricing" className="underline underline-offset-4">Pricing structure</Link></p>
         </div>
         <div className="text-charcoal-soft space-y-3">
           <p className="tracked-caps text-sage-deep">Get in touch</p>
