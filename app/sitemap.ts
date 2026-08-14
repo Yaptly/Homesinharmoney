@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
 
 const base = "https://homesinharmonyllc.com";
-const lastModified = new Date("2026-08-12");
+const lastModified = new Date("2026-08-13");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     { path: "", priority: 1 },
     { path: "/services", priority: 0.9 },
+    { path: "/pricing", priority: 0.8 },
     { path: "/house-cleaning-morgantown-wv", priority: 0.9 },
     { path: "/deep-cleaning-morgantown-wv", priority: 0.8 },
     { path: "/move-in-move-out-cleaning-morgantown-wv", priority: 0.8 },
